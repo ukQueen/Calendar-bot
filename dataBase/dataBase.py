@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import datetime
 
 month_conv = {
     "янв": "01",
@@ -660,6 +661,12 @@ def add_date(
 
 
 def get_dates_groups(event_name):
+    current_time = datetime.now().time()
+    current_date = datetime.now().date()
+
+    date = current_date.strftime("%Y.%m.%d")
+    time = current_time.strftime("%H:%M")
+
     if not os.path.exists(db_path):
         create_dataBase()
 
@@ -672,9 +679,11 @@ def get_dates_groups(event_name):
                     JOIN Events as e ON d.id_event = e.id_event
                     JOIN Groups as g ON  e.id_group = g.id_group
                     WHERE e.event_name = ?
+                    AND date >= ?
+                    AND start_time >= ?
                     GROUP BY date, start_time, end_time, g.group_name
                 """,
-        (event_name,),
+        (event_name, date, time),
     )
     dates = cursor.fetchall()
 
@@ -684,6 +693,12 @@ def get_dates_groups(event_name):
 
 
 def get_dates(event_name, group_name):
+    current_time = datetime.now().time()
+    current_date = datetime.now().date()
+
+    date = current_date.strftime("%Y.%m.%d")
+    time = current_time.strftime("%H:%M")
+
     if not os.path.exists(db_path):
         create_dataBase()
 
@@ -697,9 +712,11 @@ def get_dates(event_name, group_name):
                 JOIN Groups as g ON  e.id_group = g.id_group
                 WHERE g.group_name = ? 
                 AND e.event_name = ?
+                AND date >= ?
+                AND start_time >= ?
                 GROUP BY date, start_time, end_time, g.group_name
                 """,
-        (group_name, event_name),
+        (group_name, event_name, date, time),
     )
     dates = cursor.fetchall()
 
@@ -709,6 +726,12 @@ def get_dates(event_name, group_name):
 
 
 def get_dates_all(tg_id):
+    current_time = datetime.now().time()
+    current_date = datetime.now().date()
+
+    date = current_date.strftime("%Y.%m.%d")
+    time = current_time.strftime("%H:%M")
+
     if not os.path.exists(db_path):
         create_dataBase()
 
@@ -723,9 +746,11 @@ def get_dates_all(tg_id):
                 JOIN Groups_users as gu ON  g.id_group = gu.id_group
                 JOIN Users as u ON gu.id_user = u.id_user
                 WHERE u.tg_id = ?
+                AND date >= ?
+                AND start_time >= ?
                 GROUP BY date, start_time, end_time, g.group_name
                 """,
-        (tg_id,),
+        (tg_id, date, time),
     )
     dates = cursor.fetchall()
 
@@ -817,3 +842,5 @@ WHERE d.date = ? AND d.start_time = ?
                    """,
         (date, time),
     )
+    dates = cursor.fetchall()
+    return dates

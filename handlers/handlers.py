@@ -49,14 +49,15 @@ async def notification():
     notification_data = db.get_notification_list(
         str_current_date, str_notification_time
     )
-
+    print(f"date: {str_current_date} time: {str_notification_time}")
+    print(notification_data)
     users_id = set()
     messages = {}
 
     for data in notification_data:
-        date = datetime.strptime(data[0], "%Y.%m.%d").date()
-        start_time = datetime.strptime(data[1], "%H:%M").time()
-        end_time = datetime.strptime(data[2], "%H:%M").time()
+        date = data[0]
+        start_time = data[1]
+        end_time = data[2]
         group_name = data[3]
         event_name = data[4]
         user_id = data[5]
@@ -70,14 +71,23 @@ async def notification():
 <i>Время:</i> {start_time} - {end_time}
 
 """
-        if notification_time == start_time and date == current_date:
+        print(
+            f"date: {str_notification_time == start_time} time: {str_current_date == date}"
+        )
+        print(f"date {date} time {start_time}")
+        if str_notification_time == start_time and str_current_date == date:
             users_id.add(user_id)
-            messages[user_id] += text
+            if user_id not in messages:
+                messages[user_id] = ""
+            messages[user_id] = messages[user_id] + text
 
-    text = f"""НАПОМИНАНИЕ О СОБЫТИИ!!!\n\n"""
-    for user_id in users_id:
-        text += messages[user_id]
-        await bot.send_message(user_id, messages[user_id], parse_mode="html")
+    for user_id, message in messages.items():
+        final_text = f"""НАПОМИНАНИЕ О СОБЫТИИ!!!\n\n{message}"""
+        print(f"user_id: {user_id}")
+        print(f"text: {text}")
+        await bot.send_message(
+            user_id, final_text, parse_mode="html", reply_markup=kb.main_ikb
+        )
 
 
 @router.message(CommandStart())
@@ -103,7 +113,7 @@ async def command_start(message: Message, state: FSMContext) -> None:
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         notification,
-        IntervalTrigger(minutes=5, start_date=start_time),
+        IntervalTrigger(minutes=1, start_date=start_time),
         id="notification_job",
     )
     scheduler.start()

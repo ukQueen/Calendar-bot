@@ -330,7 +330,7 @@ def hours_start(event_name, group_name, year, month, day):
         buttons.append([])
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(current_hour),
+                text=str(current_hour).zfill(2),
                 callback_data=callback + str(current_hour).zfill(2),
             )
         )
@@ -339,7 +339,7 @@ def hours_start(event_name, group_name, year, month, day):
             break
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(current_hour),
+                text=str(current_hour).zfill(2),
                 callback_data=callback + str(current_hour).zfill(2),
             )
         )
@@ -348,7 +348,7 @@ def hours_start(event_name, group_name, year, month, day):
             break
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(current_hour),
+                text=str(current_hour).zfill(2),
                 callback_data=callback + str(current_hour).zfill(2),
             )
         )
@@ -393,7 +393,7 @@ def min_start(event_name, group_name, year, month, day, hour_start):
         buttons.append([])
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(min), callback_data=callback + str(min).zfill(2)
+                text=str(min).zfill(2), callback_data=callback + str(min).zfill(2)
             )
         )
         min += 5
@@ -401,7 +401,7 @@ def min_start(event_name, group_name, year, month, day, hour_start):
             break
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(min), callback_data=callback + str(min).zfill(2)
+                text=str(min).zfill(2), callback_data=callback + str(min).zfill(2)
             )
         )
         min += 5
@@ -427,7 +427,7 @@ def hours_end(event_name, group_name, year, month, day, hour_start, min_start):
         buttons.append([])
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(hour), callback_data=callback + str(hour).zfill(2)
+                text=str(hour).zfill(2), callback_data=callback + str(hour).zfill(2)
             )
         )
         hour += 1
@@ -435,7 +435,7 @@ def hours_end(event_name, group_name, year, month, day, hour_start, min_start):
             break
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(hour), callback_data=callback + str(hour).zfill(2)
+                text=str(hour).zfill(2), callback_data=callback + str(hour).zfill(2)
             )
         )
         hour += 1
@@ -443,7 +443,7 @@ def hours_end(event_name, group_name, year, month, day, hour_start, min_start):
             break
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(hour), callback_data=callback + str(hour).zfill(2)
+                text=str(hour).zfill(2), callback_data=callback + str(hour).zfill(2)
             )
         )
         hour += 1
@@ -476,7 +476,7 @@ def min_end(event_name, group_name, year, month, day, hour_start, min_start, hou
         buttons.append([])
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(min), callback_data=callback + str(min).zfill(2)
+                text=str(min).zfill(2), callback_data=callback + str(min).zfill(2)
             )
         )
         min += 5
@@ -484,7 +484,7 @@ def min_end(event_name, group_name, year, month, day, hour_start, min_start, hou
             break
         buttons[k].append(
             InlineKeyboardButton(
-                text=str(min), callback_data=callback + str(min).zfill(2)
+                text=str(min).zfill(2), callback_data=callback + str(min).zfill(2)
             )
         )
         min += 5
