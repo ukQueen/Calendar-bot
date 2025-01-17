@@ -5,6 +5,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (CallbackQuery, FSInputFile, Message,  ReplyKeyboardRemove)
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from dataBase.dataBase import month_conv
 
 
 import dataBase.dataBase as db
@@ -29,6 +31,9 @@ start_text = """
 
 user_id = set()
 
+
+async def notification():
+    pass
 
 
 @router.message(CommandStart())
@@ -510,11 +515,11 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
 
 <i>Дата:</i> {db.month_conv[month]}.{year}
 
-Выберите месяц:
+Выберите день:
 '''
         # await state.set_state(Calendar.read_event_name)
         await state.update_data(month = month)
-        await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.day(event_name=event_name, group_name=group_name, month=month))
+        await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.day(event_name=event_name, group_name=group_name,year=year, month=month_conv[month]))
 
     elif group_data[2] == "time":
         if group_data[3] == "start":
@@ -537,7 +542,7 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
 '''
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(day = day)
-                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.hours_start(event_name=event_name, group_name=group_name, day=day))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.hours_start(event_name=event_name, group_name=group_name, year=year, month=month_conv[month], day=day))
 
             elif group_data[4] == "min":
                 state_data = await state.get_data()
@@ -560,7 +565,7 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
 '''
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(hours_start = hours_start)
-                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.min_start(event_name=event_name, group_name=group_name, hour_start=hours_start))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.min_start(event_name=event_name, group_name=group_name, year=year, month=month_conv[month], day=day, hour_start=hours_start))
         
         elif group_data[3] == "end":
             if group_data[4] == "hour":
@@ -585,7 +590,7 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
 '''
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(min_start = min_start)
-                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.hours_end(event_name=event_name, group_name=group_name, min_start=min_start))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.hours_end(event_name=event_name, group_name=group_name, year=year, month=month_conv[month], day=day, hour_start=hours_start, min_start=min_start))
 
             elif group_data[4] == "min":
                 state_data = await state.get_data()
@@ -611,13 +616,15 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
 
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(hours_end = hours_end)
-                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.min_end(event_name=event_name, group_name=group_name, hour_end=hours_end))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.min_end(event_name=event_name, group_name=group_name, year=year, month=month_conv[month], day=day, hour_start=hours_start, min_start=min_start, hour_end=hours_end))
 
 
 
 @router.message()
 async def read_message(message: Message, state: FSMContext) -> None:
     current_state = await state.get_state()
+
+
     if current_state == Calendar.read_group_name:
         group_name = message.text
         user_data = await state.get_data()
@@ -639,6 +646,7 @@ async def read_message(message: Message, state: FSMContext) -> None:
         await message.delete()    
         await message.answer("Группы в которых вы состоите:", reply_markup=kb.groups_ikb(message.from_user.id))
         await state.set_state(Calendar.main)
+
 
     elif current_state == Calendar.edit_group_name:
         new_group_name = message.text
@@ -749,6 +757,7 @@ async def read_message(message: Message, state: FSMContext) -> None:
            # await state.update_data(created_message_id = message_del.message_id) 
         # await message.answer("Группы в которых вы состоите:", reply_markup=kb.groups_ikb(message.from_user.id))
         await state.set_state(Calendar.main)
+
 
     elif current_state == Calendar.read_event_name:
         event_name = message.text

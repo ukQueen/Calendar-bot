@@ -139,6 +139,8 @@ def add_group(group_name, tg_id):
                         WHERE group_name = ?
                         ''', (group_name,))
         group = cursor.fetchone()
+    else:
+        raise Exception(f"Группа с именем {group_name} уже существует.")
 
 
     id_user = user[0]
@@ -624,3 +626,21 @@ def delete_event(event_name, group_name):
     connection.commit()
     connection.close()
     print("Событие успешно удалено.")
+
+
+def get_notification_list(date, time):
+    if not os.path.exists(db_path):
+        create_dataBase()
+    
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute('''
+SELECT date, start_time, end_time, g.group_name, e.event_name, u.tg_id FROM Date as d
+JOIN Events as e ON d.id_event = e.id_event
+JOIN Groups as g ON  e.id_group = g.id_group
+JOIN Groups_users as gu ON gu.id_group = g.id_group
+JOIN Users as u ON u.id_user = gu.id_user
+WHERE (d.date > ? OR (d.date = ? AND d.start_time > ?))
+GROUP BY date, start_time, end_time, g.group_name, e.event_name, u.tg_id
+                   ''', (date, date, time))
