@@ -193,8 +193,9 @@ def add_group(group_name, tg_id):
             (group_name,),
         )
         group = cursor.fetchone()
-    else:
-        raise Exception(f"Группа с именем {group_name} уже существует.")
+    # else:
+
+    #     raise Exception(f"Группа с именем {group_name} уже существует.")
 
     id_user = user[0]
     id_group = group[0]

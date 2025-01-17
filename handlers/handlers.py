@@ -113,7 +113,7 @@ async def command_start(message: Message, state: FSMContext) -> None:
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         notification,
-        IntervalTrigger(minutes=1, start_date=start_time),
+        IntervalTrigger(minutes=5, start_date=start_time),
         id="notification_job",
     )
     scheduler.start()
@@ -251,7 +251,8 @@ async def events_show(callback: CallbackQuery) -> None:
                 }
             )
 
-        text = f''' 
+        text = f'''<i>События:</i>
+
 {
     ''.join([f"<i>Событие: </i><b>{date["event_name"]}</b>\n<i>Дата:</i> {date["day"]}.{date["month"]}.{date["year"]}\n<i>Время:</i> {date["hours_start"]}:{date["min_start"]} - {date["hours_end"]}:{date["min_end"]}\n<i>Группа: </i><b>{date["group_name"]}</b>\n\n"
     for date in current_date])
@@ -904,7 +905,7 @@ async def read_message(message: Message, state: FSMContext) -> None:
         username = user
         if user[0] == "@":
             username = user[1:]
-        elif user.startswith == "https://t.me/":
+        elif user.startswith("https://t.me"):
             username = user[13:]
             if username[-1] == "/":
                 username = username[:-1]
@@ -919,6 +920,7 @@ async def read_message(message: Message, state: FSMContext) -> None:
             print("deleted")
         try:
             user_id = db.get_user_id(username)
+            print(f"user_id {user_id}")
             user_in_group = db.user_in_group(group_name, user_id)
             if user_in_group:
                 await message.bot.answer_callback_query(
@@ -926,10 +928,11 @@ async def read_message(message: Message, state: FSMContext) -> None:
                 )
             else:
                 db.add_group(group_name, user_id)
+                print("added")
 
-            await message.bot.answer_callback_query(
-                callback_query_id=callback_id, text="Пользователь добавлен!"
-            )
+                await message.bot.answer_callback_query(
+                    callback_query_id=callback_id, text="Пользователь добавлен!"
+                )
 
         except Exception as e:
             print(e)
