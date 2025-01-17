@@ -2,7 +2,6 @@ from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup, KeyboardB
 
 import dataBase.dataBase as bd
 
-
 main_ikb = InlineKeyboardMarkup(row_width=3, 
                                 inline_keyboard=[[InlineKeyboardButton(text="Группы", callback_data="groups_show")],
                                                  [InlineKeyboardButton(text="События", callback_data="events_show")]])
@@ -49,9 +48,13 @@ def users_ikb(group_name, tg_id):
 def events_ikb(tg_id):
     groups = bd.get_groups(tg_id)
     events = set()
+    
     for group in groups:
-        events.update(bd.get_events(group[0]))
+        events_buf = bd.get_events(group[0])
+        for event in events_buf:
+            events.add(event)
         
+
     # events = bd.get_group(group_name)
     buttons = [
         [
@@ -69,17 +72,19 @@ def events_ikb(tg_id):
     return events_ikb
 
 
-def event_ikb(event_name, group_name):
+def event_ikb(event_name, group_name, dates):
     callback = "add_date_year_" + event_name + "_" + group_name
     print(callback)
-    event_ikb = InlineKeyboardMarkup(row_width=3, 
-                                    inline_keyboard=[[InlineKeyboardButton(text="Добавить дату", callback_data=callback)],
-                                                    [InlineKeyboardButton(text="Удалить событие", callback_data="a")],
-                                                    [InlineKeyboardButton(text="Назад ", callback_data="event_" +event_name)],
-                                                    [InlineKeyboardButton(text="На главную", callback_data="main")]])
-    return event_ikb
+    buttons = [[InlineKeyboardButton(text="Добавить дату", callback_data=callback)],
+                [InlineKeyboardButton(text="Убрать дату", callback_data="event_deleteDate_" + event_name + "_" + group_name) if dates else None],
+                [InlineKeyboardButton(text="Удалить событие из группы", callback_data="event_delete_" + event_name + "_" + group_name)],
+                [InlineKeyboardButton(text="Назад ", callback_data="event_" +event_name)],
+                [InlineKeyboardButton(text="На главную", callback_data="main")]]
+    buttons = [button for button in buttons if button[0] is not None]
+    return InlineKeyboardMarkup(row_width=3, inline_keyboard=buttons)
 
-
+# event_group_ -- для  отображения групп пользователя при создании нового события
+# event_groups_ -- для отображения груп в выбранно
 def event_groups_ikb(tg_id=None, event_name=None):
     if tg_id:
         groups = bd.get_groups(tg_id)
@@ -109,6 +114,24 @@ def event_groups_ikb(tg_id=None, event_name=None):
     groups_ikb = InlineKeyboardMarkup(row_width=3, inline_keyboard=buttons)
     return groups_ikb
 
+
+def event_dates_ikb(event_name, group_name, dates):
+    # callback="delete_event" +event_name +"_"+ group_name+"_"+ date["event_name"] + "_" + date["group_name"] + "_" + date["hours_start"] + "_" + date["min_start"] + "_" + date["hours_end"] + "_" + date["min_end"],
+
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=f"{date["day"]}.{date["month"]}.{date["year"]} {date["hours_start"]}:{date["min_start"]} - {date["hours_end"]}:{date["min_end"]}",
+                callback_data=("delete_date_" + str(index)),
+            )
+        ]
+        for index, date in enumerate(dates)
+    ]
+    buttons2 = [[InlineKeyboardButton(text="Назад ", callback_data="event_group_" + event_name + "_" + group_name)],
+                [InlineKeyboardButton(text="На главную", callback_data="main")]]
+    buttons.extend(buttons2)
+    dates_ikb = InlineKeyboardMarkup(row_width=3, inline_keyboard=buttons)
+    return dates_ikb
 
 def year(event_name, group_name, date=None):
     callback = "add_date_month_" + event_name + "_" + group_name + "_"
@@ -146,10 +169,10 @@ def day(event_name, group_name, month, date=None):
     callback = "add_date_time_start_hour_" + event_name + "_" + group_name + "_"
     back = "add_date_month_" + event_name + "_" + group_name + "_"
     buttons = InlineKeyboardMarkup(row_width=3, 
-                                inline_keyboard=[[InlineKeyboardButton(text="1", callback_data=callback + "1"),
-                                                 InlineKeyboardButton(text="2", callback_data=callback + "2")],
-                                                 [InlineKeyboardButton(text="3", callback_data=callback + "3"),
-                                                 InlineKeyboardButton(text="4", callback_data=callback + "4")],
+                                inline_keyboard=[[InlineKeyboardButton(text="1", callback_data=callback + "01"),
+                                                 InlineKeyboardButton(text="2", callback_data=callback + "02")],
+                                                 [InlineKeyboardButton(text="3", callback_data=callback + "03"),
+                                                 InlineKeyboardButton(text="4", callback_data=callback + "04")],
                                                  [InlineKeyboardButton(text="Назад ", callback_data=back + month),],
                                                  [InlineKeyboardButton(text="На главную", callback_data="main")]])
     return buttons
@@ -159,10 +182,10 @@ def hours_start(event_name, group_name, day, date=None):
     back = "add_date_day_" + event_name + "_" + group_name + "_"
 
     buttons = InlineKeyboardMarkup(row_width=3, 
-                                inline_keyboard=[[InlineKeyboardButton(text="1", callback_data=callback + "1"),
-                                                 InlineKeyboardButton(text="2", callback_data=callback + "2")],
-                                                 [InlineKeyboardButton(text="3", callback_data=callback + "3"),
-                                                 InlineKeyboardButton(text="4", callback_data=callback + "4")],
+                                inline_keyboard=[[InlineKeyboardButton(text="1", callback_data=callback + "01"),
+                                                 InlineKeyboardButton(text="2", callback_data=callback + "02")],
+                                                 [InlineKeyboardButton(text="3", callback_data=callback + "03"),
+                                                 InlineKeyboardButton(text="4", callback_data=callback + "04")],
                                                  [InlineKeyboardButton(text="Назад ", callback_data=back + day),],
                                                  [InlineKeyboardButton(text="На главную", callback_data="main")]])
     return buttons
@@ -190,10 +213,10 @@ def hours_end(event_name, group_name,min_start, date=None):
     callback = "add_date_time_end_min_" + event_name + "_" + group_name + "_"
     back = "add_date_time_start_min_" + event_name + "_" + group_name + "_"
     buttons = InlineKeyboardMarkup(row_width=3, 
-                          inline_keyboard=[[InlineKeyboardButton(text="1", callback_data=callback + "1"),
-                                                 InlineKeyboardButton(text="2", callback_data=callback + "2")],
-                                                 [InlineKeyboardButton(text="3", callback_data=callback + "3"),
-                                                 InlineKeyboardButton(text="4", callback_data=callback + "4")],
+                          inline_keyboard=[[InlineKeyboardButton(text="1", callback_data=callback + "01"),
+                                                 InlineKeyboardButton(text="2", callback_data=callback + "02")],
+                                                 [InlineKeyboardButton(text="3", callback_data=callback + "03"),
+                                                 InlineKeyboardButton(text="4", callback_data=callback + "04")],
                                                  [InlineKeyboardButton(text="Назад ", callback_data=back + min_start),],
                                                  [InlineKeyboardButton(text="На главную", callback_data="main")]])
     return buttons

@@ -1,7 +1,8 @@
 import os
 import sqlite3
 
-
+month_conv = {"янв": "01", "февр": "02", "март": "03", "апр": "04", "май": "05", "июнь": "06", "июль": "07", "авг": "08", "сент": "09", "окт": "10", "нояб": "11", "дек": "12"}
+month_conv_r = {"01": "янв", "02": "февр", "03": "март", "04": "апр", "05": "май", "06": "июнь", "07": "июль", "08": "авг", "09": "сент", "10": "окт", "11": "нояб", "12": "дек"}
 
 db_path = 'dataBase/events.db'
 
@@ -465,3 +466,161 @@ def delete_group(group_name, tg_id):
     print("Группа успешно удалена.")
 
 
+def add_date(event_name, group_name, year, month, day, start_hour, start_min, end_hour, end_min):
+    if not os.path.exists(db_path):
+        create_dataBase()
+
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    start_time = f"{start_hour}:{start_min}"
+    end_time = f"{end_hour}:{end_min}"
+    date = f"{year}.{month_conv[month]}.{day}"
+
+    cursor.execute('''
+                SELECT id_event FROM Events
+                WHERE event_name = ?
+                AND id_group = (
+                    SELECT id_group FROM Groups
+                    WHERE group_name = ?
+                )
+                ''', (event_name, group_name))
+    id_event = cursor.fetchone()[0]
+
+    cursor.execute('''
+                SELECT * FROM Date
+                    WHERE date = ?
+                    AND id_event = ?
+                    AND start_time = ?
+                    AND end_time = ?
+                ''', (date, id_event, start_time, end_time))
+
+    existing_date = cursor.fetchone()
+    if existing_date:
+        raise Exception(f"Дата {date} уже существует.")
+    
+    else:
+        cursor.execute('''
+                    INSERT INTO Date (date, start_time, end_time, id_event)
+                        VALUES (?, ?, ?, ?)
+                    ''', (date, start_time, end_time, id_event))
+        connection.commit()
+        connection.close()
+        print("Дата успешно добавлена.")
+
+
+def get_dates_groups(event_name):
+    if not os.path.exists(db_path):
+        create_dataBase()
+
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute('''
+                SELECT date, start_time, end_time, g.group_name FROM Date as d
+                    JOIN Events as e ON d.id_event = e.id_event
+                    JOIN Groups as g ON  e.id_group = g.id_group
+                    WHERE e.event_name = ?
+                    GROUP BY date, start_time, end_time, g.group_name
+                ''', (event_name,))
+    dates = cursor.fetchall()
+
+    
+    connection.close()
+    print(dates)
+    return dates
+
+def get_dates(event_name, group_name):
+    if not os.path.exists(db_path):
+        create_dataBase()
+
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute('''
+                SELECT date, start_time, end_time FROM Date as d
+                JOIN Events as e ON d.id_event = e.id_event
+                JOIN Groups as g ON  e.id_group = g.id_group
+                WHERE g.group_name = ? 
+                AND e.event_name = ?
+                GROUP BY date, start_time, end_time, g.group_name
+                ''', (group_name, event_name))
+    dates = cursor.fetchall()
+
+    
+    connection.close()
+    print(dates)
+    return dates
+
+def get_dates_all(tg_id):
+    if not os.path.exists(db_path):
+        create_dataBase()
+
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute('''
+                SELECT date, start_time, end_time, g.group_name, e.event_name FROM Date as d
+                JOIN Events as e ON d.id_event = e.id_event
+                JOIN Groups as g ON  e.id_group = g.id_group
+                JOIN Groups_users as gu ON  g.id_group = gu.id_group
+                JOIN Users as u ON gu.id_user = u.id_user
+                WHERE u.tg_id = ?
+                GROUP BY date, start_time, end_time, g.group_name
+                ''', (tg_id,))
+    dates = cursor.fetchall()
+
+    
+    connection.close()
+    print(dates)
+    return dates
+
+def delete_date( event_name, group_name, date, start_time, end_time):
+    if not os.path.exists(db_path):
+        create_dataBase()
+
+    print(date, start_time, end_time)
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute('''
+                SELECT id_event FROM Events
+                WHERE event_name = ?
+                AND id_group = (
+                    SELECT id_group FROM Groups
+                    WHERE group_name = ?
+                )
+                ''', (event_name, group_name))
+    id_event = cursor.fetchone()[0]
+
+    cursor.execute('''
+                DELETE FROM Date
+                WHERE date = ?
+                AND start_time = ?
+                AND end_time = ?
+                AND id_event = ?
+                ''', (date, start_time, end_time, id_event))
+    connection.commit()
+    connection.close()
+    print("Дата успешно удалена.")
+
+def delete_event(event_name, group_name):
+    if not os.path.exists(db_path):
+        create_dataBase()
+
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    cursor.execute('''
+                SELECT id_group FROM Groups
+                WHERE group_name = ?
+                ''', (group_name,))
+    id_group = cursor.fetchone()[0]
+
+    cursor.execute('''
+                DELETE FROM Events
+                WHERE event_name = ?
+                AND id_group = ?
+                ''', (event_name, id_group))
+    connection.commit()
+    connection.close()
+    print("Событие успешно удалено.")

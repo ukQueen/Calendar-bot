@@ -149,7 +149,34 @@ async def edit_group(callback: CallbackQuery,state: FSMContext) -> None:
 async def events_show(callback: CallbackQuery) -> None:
     groups_data = callback.data.split("_")
     if groups_data[1] == "show":
-        await callback.message.edit_text("Планируемые события:", reply_markup=kb.events_ikb(callback.from_user.id))
+        dates = db.get_dates_all(callback.from_user.id)
+
+        current_date = []
+        for date in dates:
+            date_day = date[0].split(".")
+            year = date_day[0]
+            month = date_day[1]
+            day = date_day[2]
+
+            time_start = date[1].split(":")
+            hours_start = time_start[0]
+            min_start = time_start[1]
+
+            time_end = date[2].split(":")
+            hours_end = time_end[0]
+            min_end = time_end[1]
+            
+            group_name = date[3]
+            event_name = date[4]
+            current_date.append({"day": day, "month": month, "year": year, "hours_start": hours_start, "min_start": min_start, "hours_end": hours_end, "min_end": min_end, "group_name": group_name, "event_name": event_name})
+
+        text = f''' 
+{
+    ''.join([f"<i>Событие: </i><b>{date["event_name"]}</b>\n<i>Дата:</i> {date["day"]}.{date["month"]}.{date["year"]}\n<i>Время:</i> {date["hours_start"]}:{date["min_start"]} - {date["hours_end"]}:{date["min_end"]}\n<i>Группа: </i><b>{date["group_name"]}</b>\n\n"
+    for date in current_date])
+}
+'''
+        await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.events_ikb(callback.from_user.id))
     elif groups_data[1] == "leave":
         # group_name = groups_data[2]
         # db.delete_group(group_name, callback.from_user.id)
@@ -164,9 +191,16 @@ async def create_event(callback: CallbackQuery,state: FSMContext) -> None:
                             # callback_id = callback.id)
     
 
+
+# event_groups_ -- при создании события (отображение групп при создании события)
+# event_group_ -- выбранное событие => отображаются даты и группы  event_ikb(event_name=event_name, group_name=group_name)
+# event_date_ -- после добавления даты событию (должно отображаться событие группа и даты) клавиатура: event_ikb(event_name=event_name, group_name=group_name)
+# event_ когда находимся в меню  клавиатура: event_groups_ikb(event_name=event_name)
 @router.callback_query(lambda query: query.data.startswith("event_"))
 async def create_event_group(callback: CallbackQuery,state: FSMContext) -> None:
     group_data = callback.data.split("_")
+
+    # для отображения групп при создании события
     if group_data[1] == "groups":
         group_name = group_data[2]
         message_del = await callback.message.edit_text("Введите название события:")
@@ -174,19 +208,47 @@ async def create_event_group(callback: CallbackQuery,state: FSMContext) -> None:
         await state.update_data(created_message_id = message_del.message_id,
                                 callback_id = callback.id,
                                 group_name = group_name)
+        
+    # отображение выбранных события и группы
     elif group_data[1] == "group":
         event_name = group_data[2]
         group_name = group_data[3]
+        dates = db.get_dates(event_name, group_name)
+
+        current_date = []
+        for date in dates:
+            date_day = date[0].split(".")
+            year = date_day[0]
+            month = date_day[1]
+            day = date_day[2]
+
+            time_start = date[1].split(":")
+            hours_start = time_start[0]
+            min_start = time_start[1]
+
+            time_end = date[2].split(":")
+            hours_end = time_end[0]
+            min_end = time_end[1]
+            
+            current_date.append({"day": day, "month": month, "year": year, "hours_start": hours_start, "min_start": min_start, "hours_end": hours_end, "min_end": min_end, "group_name": group_name})
+
         text = f'''<i>Событие:</i> 
 <b>{event_name}</b>
 
+<i>Группа: </i><b>{group_name}</b>
+
+{
+    ''.join([f"<i>Дата:</i> {date["day"]}.{date["month"]}.{date["year"]}\n<i>Время:</i> {date["hours_start"]}:{date["min_start"]} - {date["hours_end"]}:{date["min_end"]}\n\n"
+    for date in current_date])
+}
 '''
-        await callback.message.edit_text(text, reply_markup=kb.event_ikb(event_name=event_name, group_name=group_name), parse_mode="html")
+        await callback.message.edit_text(text, reply_markup=kb.event_ikb(event_name=event_name, group_name=group_name, dates=current_date), parse_mode="html")
         # await state.set_state(Calendar.read_event_name)
         # await state.update_data(created_message_id = message_del.message_id,
                                 # callback_id = callback.id,
                                 # group_name = group_name)
 
+    # отображение групп в выбранном событии после добавления новой даты 
     elif group_data[1]== "date":
         state_data = await state.get_data()
         event_name = state_data.get('event_name')
@@ -198,32 +260,196 @@ async def create_event_group(callback: CallbackQuery,state: FSMContext) -> None:
         min_start = state_data.get('min_start')
         hours_end = state_data.get('hours_end')
         min_end = group_data[4]
+        
         try:
             db.add_date(event_name, group_name, year, month, day, hours_start, min_start, hours_end, min_end)
             await callback.answer("Дата добавлена!")
         except Exception as e:
             print(e)
             await callback.answer("Дата не добавлена!")
+
+        dates = db.get_dates(event_name, group_name)
+
+        current_date = []
+        for date in dates:
+            date_day = date[0].split(".")
+            year = date_day[0]
+            month = date_day[1]
+            day = date_day[2]
+
+            time_start = date[1].split(":")
+            hours_start = time_start[0]
+            min_start = time_start[1]
+
+            time_end = date[2].split(":")
+            hours_end = time_end[0]
+            min_end = time_end[1]
+            
+            # group_name = date[3]
+            current_date.append({"day": day, "month": month, "year": year, "hours_start": hours_start, "min_start": min_start, "hours_end": hours_end, "min_end": min_end, "group_name": group_name})
+
         text = f'''<i>Событие:</i> 
 <b>{event_name}</b>
 
+<i>Группа: </i><b>{group_name}</b>
+
+{
+   ''.join([f"<i>Дата:</i> {date["day"]}.{date["month"]}.{date["year"]}\n<i>Время:</i> {date["hours_start"]}:{date["min_start"]} - {date["hours_end"]}:{date["min_end"]}\n\n"
+    for date in current_date])
+}
 '''
-        await callback.message.edit_text(text, reply_markup=kb.event_ikb(event_name=event_name, group_name=group_name), parse_mode="html")
+        await callback.message.edit_text(text, reply_markup=kb.event_ikb(event_name=event_name, group_name=group_name, dates=current_date), parse_mode="html")
         
+    #отображение дат у выбранных события и группы (при удалении даты)
+    elif group_data[1] == "deleteDate":
+        event_name = group_data[2]
+        group_name = group_data[3]
+        dates = db.get_dates(event_name, group_name)
+
+        current_date = []
+        for date in dates:
+            date_day = date[0].split(".")
+            year = date_day[0]
+            month = date_day[1]
+            day = date_day[2]
+            print(date_day)
+            print(f"year: {year}, month: {month}, day: {day}")
+
+            time_start = date[1].split(":")
+            hours_start = time_start[0]
+            min_start = time_start[1]
+
+            time_end = date[2].split(":")
+            hours_end = time_end[0]
+            min_end = time_end[1]
+            
+            current_date.append({"day": day, "month": month, "year": year, "hours_start": hours_start, "min_start": min_start, "hours_end": hours_end, "min_end": min_end, "group_name": group_name, "event_name": event_name})
+
+        text = f'''<i>Событие:</i>
+<b>{event_name}</b>
+
+<i>Группа: </i><b>{group_name}</b>
+
+Выберите дату которую хотите удалить:'''
+        await state.update_data(current_date = current_date)
+        await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.event_dates_ikb(event_name, group_name, dates=current_date))
+
+    # # удаление полностью события из группы
+    # elif group_data[1] == "delete":
+    #     event_name = group_data[2]
+    #     group_name = group_data[3]
+    #     db.delete_event(event_name, group_name)
+    #     await callback.message.edit_text("Планируемые события:", reply_markup=kb.events_ikb(callback.from_user.id))
+    # else:
+    #         event_name = group_data[2]
+    #         group_name = group_data[3]
+    #         db.delete_event(event_name, group_name)
+    #         await callback.answer("событие удалено!")
 
 
+
+
+    # отображение групп в выбранном событии 
     else:
-        event_name = group_data[1]
+        if group_data[1] == "delete":
+            event_name = group_data[2]
+            group_name = group_data[3]
+            db.delete_event(event_name, group_name)
+        else:
+            event_name = group_data[1]
+        dates = db.get_dates_groups(event_name)
+
+        current_date = []
+        for date in dates:
+            date_day = date[0].split(".")
+            year = date_day[0]
+            month = date_day[1]
+            day = date_day[2]
+
+            time_start = date[1].split(":")
+            hours_start = time_start[0]
+            min_start = time_start[1]
+
+            time_end = date[2].split(":")
+            hours_end = time_end[0]
+            min_end = time_end[1]
+
+            group_name = date[3]
+            current_date.append({"day": day, "month": month, "year": year, "hours_start": hours_start, "min_start": min_start, "hours_end": hours_end, "min_end": min_end, "group_name": group_name})
+
         text = f'''<i>Событие:</i> 
 <b>{event_name}</b>
 
-Группы:'''
+{
+    ''.join([f"<i>Дата:</i> {date["day"]}.{date["month"]}.{date["year"]}\n<i>Время:</i> {date["hours_start"]}:{date["min_start"]} - {date["hours_end"]}:{date["min_end"]}\n<i>Группа: </i><b>{date["group_name"]}</b>\n\n"
+    for date in current_date])
+}
+'''
         await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.event_groups_ikb(event_name=event_name))
         # await state.set_state(Calendar.read_event_name)
         # await state.update_data(created_message_id = message_del.message_id,
                                 # callback_id = callback.id,
                                 # group_name = group_name)   
 
+# отображаются даты у выбранных события и группы после удаления даты 
+@router.callback_query(lambda query: query.data.startswith("delete_date"))
+async def delete_date_event(callback: CallbackQuery,state: FSMContext) -> None:
+    group_data = callback.data.split("_")
+    index = int (group_data[2])
+
+    data = await state.get_data()
+    current_date = data.get('current_date', [])
+
+    if not isinstance(current_date, list) or index >= len(current_date):
+        await callback.answer("Ошибка: Неверный индекс или данные отсутствуют.", show_alert=True)
+        return
+    
+    current_date = current_date[index]
+
+    event_name = current_date["event_name"]
+    group_name = current_date["group_name"]
+    year = current_date["year"]
+    month = current_date["month"]
+    day = current_date["day"]
+    hours_start = current_date["hours_start"]
+    min_start = current_date["min_start"]
+    hours_end = current_date["hours_end"]
+    min_end = current_date["min_end"]
+
+    date = f"{year}.{month}.{day}"
+    time_start = f"{hours_start}:{min_start}"
+    time_end = f"{hours_end}:{min_end}"
+    print (f"date: {date}, time_start: {time_start}, time_end: {time_end}")
+    db.delete_date(event_name, group_name, date, time_start, time_end)
+    dates = db.get_dates(event_name, group_name)
+
+    current_date = []
+    for date in dates:
+        date_day = date[0].split(".")
+        year = date_day[2]
+        month = date_day[1]
+        day = date_day[2]
+
+        time_start = date[1].split(":")
+        hours_start = time_start[0]
+        min_start = time_start[1]
+
+        time_end = date[2].split(":")
+        hours_end = time_end[0]
+        min_end = time_end[1]
+        
+        current_date.append({"day": day, "month": month, "year": year, "hours_start": hours_start, "min_start": min_start, "hours_end": hours_end, "min_end": min_end})
+
+    text = f'''<i>Событие:</i>
+<b>{event_name}</b>
+
+<i>Группа: </i><b>{group_name}</b>
+{
+    ''.join([f"<i>Дата:</i> {date["day"]}.{date["month"]}.{date["year"]}\n<i>Время:</i> {date["hours_start"]}:{date["min_start"]} - {date["hours_end"]}:{date["min_end"]}\n\n"
+    for date in current_date])
+}
+'''
+    await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.event_ikb(event_name=event_name, group_name=group_name, dates=current_date))
 
 
 @router.callback_query(lambda query: query.data.startswith("add_date"))
@@ -236,33 +462,59 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
         event_name = group_data[3]
         group_name = group_data[4]
 
+        text = f'''<i>Создание даты события:</i>
+<b>{event_name}</b>
+
+<i>Группа:</i>
+<b>{group_name}</b>
+
+Выберите год:
+'''
         # await state.set_state(Calendar.read_event_name)
         await state.update_data(event_name = event_name,
                                 callback_id = callback.id,
                                 group_name = group_name)
-        await callback.message.edit_text("Выберите год:", reply_markup=kb.year(event_name=event_name, group_name=group_name))
+        await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.year(event_name=event_name, group_name=group_name))
 
 
     elif group_data[2] == "month":
         state_data = await state.get_data()
         event_name = state_data.get('event_name')
         group_name = state_data.get('group_name')
-        year = group_data[3]
+        year = group_data[5]
+        text = f'''<i>Создание даты события:</i>
+<b>{event_name}</b>
 
+<i>Группа:</i>
+<b>{group_name}</b>
+
+<i>Дата:</i> {year}
+
+Выберите месяц:
+'''
         # await state.set_state(Calendar.read_event_name)
         await state.update_data(year = year)
-        await callback.message.edit_text("Выберите месяц:", reply_markup=kb.month(event_name=event_name, group_name=group_name, year=year))
+        await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.month(event_name=event_name, group_name=group_name, year=year))
 
     elif group_data[2] == "day":
         state_data = await state.get_data()
         event_name = state_data.get('event_name')
         group_name = state_data.get('group_name')
         year = state_data.get('year')
-        month = group_data[3]
+        month = group_data[5]
+        text = f'''<i>Создание даты события:</i>
+<b>{event_name}</b>
 
+<i>Группа:</i>
+<b>{group_name}</b>
+
+<i>Дата:</i> {db.month_conv[month]}.{year}
+
+Выберите месяц:
+'''
         # await state.set_state(Calendar.read_event_name)
         await state.update_data(month = month)
-        await callback.message.edit_text("Выберите день:", reply_markup=kb.day(event_name=event_name, group_name=group_name, month=month))
+        await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.day(event_name=event_name, group_name=group_name, month=month))
 
     elif group_data[2] == "time":
         if group_data[3] == "start":
@@ -273,10 +525,19 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
                 year = state_data.get('year')
                 month = state_data.get('month')
                 day = group_data[7]
+                text = f'''<i>Создание даты события:</i>
+<b>{event_name}</b>
 
+<i>Группа:</i>
+<b>{group_name}</b>
+
+<i>Дата:</i> {day}.{db.month_conv[month]}.{year}
+
+Выберите час начала события:
+'''
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(day = day)
-                await callback.message.edit_text("Выберите час начал:", reply_markup=kb.hours_start(event_name=event_name, group_name=group_name, day=day))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.hours_start(event_name=event_name, group_name=group_name, day=day))
 
             elif group_data[4] == "min":
                 state_data = await state.get_data()
@@ -286,10 +547,20 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
                 month = state_data.get('month')
                 day = state_data.get('day')
                 hours_start = group_data[7]
+                text = f'''<i>Создание даты события:</i>
+<b>{event_name}</b>
 
+<i>Группа:</i>
+<b>{group_name}</b>
+
+<i>Дата:</i> {day}.{db.month_conv[month]}.{year}
+<i>Время:</i> {hours_start} 
+
+Выберите минуты начала события:
+'''
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(hours_start = hours_start)
-                await callback.message.edit_text("Выберите минуты начала:", reply_markup=kb.min_start(event_name=event_name, group_name=group_name, hour_start=hours_start))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.min_start(event_name=event_name, group_name=group_name, hour_start=hours_start))
         
         elif group_data[3] == "end":
             if group_data[4] == "hour":
@@ -301,10 +572,20 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
                 day = state_data.get('day')
                 hours_start = state_data.get('hours_start')
                 min_start = group_data[7]
+                text = f'''<i>Создание даты события:</i>
+<b>{event_name}</b>
 
+<i>Группа:</i>
+<b>{group_name}</b>
+
+<i>Дата:</i> {day}.{db.month_conv[month]}.{year}
+<i>Время:</i> {hours_start}:{min_start} 
+
+Выберите час окончания события:
+'''
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(min_start = min_start)
-                await callback.message.edit_text("Выберите час окончания:", reply_markup=kb.hours_end(event_name=event_name, group_name=group_name, min_start=min_start))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.hours_end(event_name=event_name, group_name=group_name, min_start=min_start))
 
             elif group_data[4] == "min":
                 state_data = await state.get_data()
@@ -316,10 +597,21 @@ async def add_date_group(callback: CallbackQuery,state: FSMContext) -> None:
                 hours_start = state_data.get('hours_start')
                 min_start = state_data.get('min_start')
                 hours_end = group_data[7]
+                text = f'''<i>Создание даты события:</i>
+<b>{event_name}</b>
+
+<i>Группа:</i>
+<b>{group_name}</b>
+
+<i>Дата:</i> {day}.{db.month_conv[month]}.{year}
+<i>Время:</i> {hours_start}:{min_start} - {hours_end} 
+
+Выберите минуты окончания события:
+'''
 
                 # await state.set_state(Calendar.read_event_name)
                 await state.update_data(hours_end = hours_end)
-                await callback.message.edit_text("Выберите минуты окончания:", reply_markup=kb.min_end(event_name=event_name, group_name=group_name, hour_end=hours_end))
+                await callback.message.edit_text(text, parse_mode="html", reply_markup=kb.min_end(event_name=event_name, group_name=group_name, hour_end=hours_end))
 
 
 
